@@ -173,9 +173,10 @@ def run_training_loop(params):
             print('\nCollecting video rollouts eval')
             eval_video_paths = utils.sample_n_trajectories(
                 env, actor, MAX_NVIDEO, MAX_VIDEO_LEN, True)
-
+            # print('path:',eval_video_paths)
             # save videos
             if eval_video_paths is not None:
+                print('Logging videos to tensorboard...')
                 logger.log_paths_as_videos(
                     eval_video_paths, itr,
                     fps=fps,
@@ -232,7 +233,7 @@ def main():
     parser.add_argument('--size', type=int, default=64)  # width of each layer, of policy to be learned
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)  # LR for supervised learning
 
-    parser.add_argument('--video_log_freq', type=int, default=5)
+    parser.add_argument('--video_log_freq', type=int, default=1)
     parser.add_argument('--scalar_log_freq', type=int, default=1)
     parser.add_argument('--no_gpu', '-ngpu', action='store_true')
     parser.add_argument('--which_gpu', type=int, default=0)
