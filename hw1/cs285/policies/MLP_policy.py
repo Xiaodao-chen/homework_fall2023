@@ -129,6 +129,16 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # through it. For example, you can return a torch.FloatTensor. You can also
         # return more flexible objects, such as a
         # `torch.distributions.Distribution` object. It's up to you!
+        observation = observation.float().to(ptu.device)
+        mean_action = self.mean_net(observation)
+        # Convert log standard deviation to standard deviation
+        std  = torch.exp(self.logstd)
+        # To broadcast std over the batch dimension, use unsqueeze if needed
+        # std = std.expand_as(mean_action)          # shape: (batch_size, ac_dim)
+        action_distribution = distributions.Normal(mean_action, std)
+        sampled_action = action_distribution.rsample()
+        return sampled_action
+    
         raise NotImplementedError
 
     def update(self, observations, actions):
@@ -141,8 +151,29 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             dict: 'Training Loss': supervised learning loss
         """
         # TODO: update the policy and return the loss
-        loss = TODO
+        # Predict actions using the forward pass
+        
+        predicted_actions = self.forward(observations)
+
+        # Compute the Mean Squared Error (MSE) loss between predicted actions and true actions
+        loss = F.mse_loss(predicted_actions, actions)
+
+        # Zero the gradients before the backward pass
+        self.optimizer.zero_grad()
+
+        # Backpropagate the loss
+        loss.backward()
+
+        # Perform a step of optimization
+        self.optimizer.step()
+
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
         }
+    def get_action(self, observation: np.ndarray) -> np.ndarray:
+        observation = torch.tensor(
+            observation, dtype=torch.float32).to(ptu.device)
+        with torch.no_grad():
+            action = ptu.to_numpy(self.forward(observation))
+        return action
